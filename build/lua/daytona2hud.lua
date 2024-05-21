@@ -213,8 +213,17 @@ local function drawLRMAXTimer(v, x, y, time, flags, positioncountdown, overtime,
 	elseif overtime then
 		drawNewString(v, "LRMT", "OVERTIME!", x, y+4, flags, nil, "center")
 	elseif (gametype & GT_SPECIAL) then //Timer spits out an error code
-		drawNewString(v, "LRMT", "522 ERROR:", x, y, flags, nil, "center")
-		drawNewString(v, "LRMT", "SYNC FAILURE", x, y+7, flags, nil, "center")
+		if ufo and ufo.valid and ufo.health > 0 then
+			drawNewString(v, "LRMT", "522 ERROR:", x, y, flags, nil, "center")
+			drawNewString(v, "LRMT", "SYNC FAILURE", x, y+7, flags, nil, "center")
+		elseif not p.exiting then
+			drawNewString(v, "LRMT", "RESYNC IN", x, y, flags, nil, "center")
+			drawNewString(v, "LRMT", "PROGRESS...", x, y+7, flags, nil, "center")
+		else
+			local specflags = flags & (~V_HUDTRANS)
+			drawNewString(v, "LRMT", "HVR SYNC", x, y, specflags, nil, "center")
+			drawNewString(v, "LRMT", "RESTORED!", x, y+7, specflags, nil, "center")
+		end
 	else
 		drawNewString(v, "LRMT", "TIME", x, y, flags, nil, "center")
 		drawNewString(v, "LRMT", "LIMIT", x, y+7, flags, nil, "center")
@@ -709,7 +718,6 @@ hud.add(function(v, p, c)
 	hud.disable("time") //Time
 	hud.disable("gametypeinfo") //Laps
 	hud.disable("position") //Placement
-	hud.disable("minirankings") //Mini Rankings
 	hud.disable("speedometer") //Speed
 	hud.disable("freeplay") //Freeplay info
 	

@@ -260,7 +260,15 @@ rawset(_G, "DTRMedals", setmetatable({
 }, {__index = function() return {1, 2, 3, 4} end}))
 
 rawset(_G, "firstloadmap", function(map, force)
-	if setmaps[map] and (not force) then return false end //This map has been loaded in before.
+	if not map then
+		CONS_Printf(p,"Missing map number!")
+		return
+	end
+	if not mapheaderinfo[map] then
+		CONS_Printf(p,"Map "..map.." doesn't currently exist!")
+		return
+	end
+	if setmaps[string.upper(G_BuildMapName(map))] and (not force) then return false end //This map has been loaded in before.
 	
 	local basetime = tonumber(mapheaderinfo[map].arcadetime)
 	if basetime == nil then
@@ -288,12 +296,20 @@ rawset(_G, "firstloadmap", function(map, force)
 	if bonustime > basetime then bonustime = basetime end
 	
 	DTRTimes[string.upper(G_BuildMapName(map))] = {basetime, bonustime}
-	setmaps[map] = true
-	if not force then print("Map "..map.." is now loaded!") end
+	setmaps[string.upper(G_BuildMapName(map))] = true
+	if not force then print("Map "..G_BuildMapName(map).." is now loaded!") end
 	return true //This is the first time loading in the map!
 end)
 	
 rawset(_G, "GetDTRTimes", function(map)
+	if not map then
+		CONS_Printf(p,"Missing map number!")
+		return
+	end
+	if not mapheaderinfo[map] then
+		CONS_Printf(p,"Map "..map.." doesn't currently exist!")
+		return
+	end
 	firstloadmap(map, false)
 	local soc
 	soc = DTRTimes[string.upper(G_BuildMapName(map))]
@@ -302,8 +318,20 @@ rawset(_G, "GetDTRTimes", function(map)
 end)
 
 rawset(_G, "GetDTRMedals", function(map)
+	if not map then
+		CONS_Printf(p,"Missing map number or name!")
+		return
+	end
+	if not mapheaderinfo[map] or setmaps[string.upper(map)] then
+		CONS_Printf(p,"Map "..map.." doesn't currently exist!")
+		return
+	end
 	local soc
-	soc = DTRMedals[string.upper(G_BuildMapName(map))]
+	if setmaps[string.upper(map)] then
+		soc = DTRMedals[string.upper(map)]
+	else
+		soc = DTRMedals[string.upper(G_BuildMapName(map))]
+	end
 	if not soc then soc = {1,2,3,4} end
 	if not soc[2] then 
 		soc[2] = ((soc[1] * 11) / 10)
@@ -321,7 +349,7 @@ rawset(_G, "GetDTRMedals", function(map)
 end)
 
 for i = 1, 234 do
-	setmaps[i] = true
+	setmaps[string.upper(G_BuildMapName(tonumber(i)))] = true
 end
 
 rawset(_G, "setnewmaptime", function(p, map, base, bonus, override)
@@ -333,6 +361,7 @@ rawset(_G, "setnewmaptime", function(p, map, base, bonus, override)
 	end
 	if not mapheaderinfo[tonumber(map)] then
 		CONS_Printf(p,"Map "..map.." doesn't currently exist!")
+		return
 	end
 	if (not newbonus) and (not mapheaderinfo[map].arcadeboss) then
 		CONS_Printf(p,"Missing time bonus!")
@@ -351,14 +380,14 @@ rawset(_G, "setnewmaptime", function(p, map, base, bonus, override)
 	if newbonus%5 > 0 then
 		newbonus = $ + 5 - ($%5)
 	end
-	if setmaps[tonumber(map)] and not override then
+	if setmaps[string.upper(G_BuildMapName(tonumber(map)))] and not override then
 		CONS_Printf(p,"This map already has a time limit set!")
 		return
 	else
-		if override and setmaps[tonumber(map)] then CONS_Printf(p,"Overriding times for Map "..map.."...") end
+		if override and setmaps[string.upper(G_BuildMapName(tonumber(map)))] then CONS_Printf(p,"Overriding times for Map "..G_BuildMapName(tonumber(map)).."...") end
 		DTRTimes[string.upper(G_BuildMapName(tonumber(map)))] = {newbase, newbonus}
-		setmaps[tonumber(map)] = true
-		CONS_Printf(p,"Map times for Map "..map.."are set! "..DTRTimes[string.upper(G_BuildMapName(tonumber(map)))][1].."s start, "..DTRTimes[string.upper(G_BuildMapName(tonumber(map)))][2].."s bonus per lap")
+		setmaps[string.upper(G_BuildMapName(tonumber(map)))] = true
+		CONS_Printf(p,"Map times for Map "..string.upper(G_BuildMapName(tonumber(map))).." are set! "..DTRTimes[string.upper(G_BuildMapName(tonumber(map)))][1].."s start, "..DTRTimes[string.upper(G_BuildMapName(tonumber(map)))][2].."s bonus per lap")
 	end
 end)
 
@@ -367,9 +396,13 @@ COM_AddCommand("setmaptime", function(p, map, base, bonus, override)
 end, 1)
 
 COM_AddCommand("checkmaptime", function(p, map)
-	if not tonumber(map) then
+	if setmaps[string.upper(map)] then
+		CONS_Printf(p, DTRTimes[string.upper(map)][1].."s start, "..DTRTimes[string.upper(map)][2].."s bonus for map "..string.upper(map))
+	elseif not tonumber(map) then
 		CONS_Printf(p, "Missing map number!")
-	elseif setmaps[tonumber(map)] then
+	elseif not mapheaderinfo[tonumber(map)] then
+		CONS_Printf(p,"Map "..map.." doesn't currently exist!")
+	elseif setmaps[string.upper(G_BuildMapName(tonumber(map)))] then
 		CONS_Printf(p, DTRTimes[string.upper(G_BuildMapName(tonumber(map)))][1].."s start, "..DTRTimes[string.upper(G_BuildMapName(tonumber(map)))][2].."s bonus for map "..map)
 	else
 		CONS_Printf(p, "This map doesn't have a time set yet!")
