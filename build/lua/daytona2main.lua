@@ -224,6 +224,7 @@ addHook("MapLoad", do
 	daytonaracers.diff = difficulty.value
 	daytonaracers.diffsuff = DIFFSUFF[daytonaracers.diff]
 	daytonaracers.ringtimer = RINGTIME[daytonaracers.diff]
+	if daytonaracers.ringtimer == -1 then daytonaracers.ringtimer = ringtimemod end
 	daytonaracers.extimemod = extratimemod.value
 	daytonaracers.explosiveKO = explosiveKO.value
 	daytonaracers.startmod = starttimermod.value
