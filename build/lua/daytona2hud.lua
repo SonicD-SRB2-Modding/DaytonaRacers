@@ -326,7 +326,7 @@ local function drawLRMAXEmeralds(v, p, flags, x, y)
 	v.drawString(x, y, t .. " EMERALD" .. ((t != 1 and "S") or ""), flags|bartextcol, "center")
 end
 
-local function drawLRMAXUfoHealth(v, flags, x, y)
+local function drawLRMAXUfoHealth(v, flags, x, y, p)
 	--Get the position of our health bar
 	x = $ or 240
 	y = $ or 5
@@ -742,7 +742,7 @@ hud.add(function(v, p, c)
 	end
 	
 	if (gametyperules & GTR_CATCHER) then
-		drawLRMAXUfoHealth(v, V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP, 280, 5)
+		drawLRMAXUfoHealth(v, V_HUDTRANS|V_SNAPTORIGHT|V_SNAPTOTOP, 280, 5, p)
 	end
 	
 	if modeattacking and not (gametype & GT_SPECIAL) then
@@ -765,3 +765,9 @@ hud.add(function(v, p, c)
 	end
 	
 end, "game")
+
+hud.add(function(v)
+	//SonicD Icon
+	v.drawScaled(320*FRACUNIT, 0, FRACUNIT/2, v.cachePatch("SDICON"), V_SNAPTORIGHT)
+	v.drawString(308, 35, "A SonicD Mod", V_SNAPTORIGHT, "small-right")
+end, "title")

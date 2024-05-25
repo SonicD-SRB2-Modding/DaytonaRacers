@@ -128,7 +128,7 @@ addHook("ThinkFrame", do
 					if (p.daytona.quirpcooldown == 0) then
 						announcerlapcallouts(p)
 					end
-				else
+				elseif p.daytona.timelimit ~= nil and (p.daytona.timelimit >= 0) then
 					announcerlowtimewarnings(p, max(p.daytona.timelimit - (leveltime - starttime), 0))
 				end
 			end

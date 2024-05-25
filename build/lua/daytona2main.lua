@@ -157,8 +157,13 @@ local function setmaptime(map)
 	lapmod = numlaps
 	lapmod = $ - mapheaderinfo[map].numlaps //Postive if numlaps is more than mapheaderinfo[map].numlaps
 	
-	local errorbonus = daytonakart.extimemod * lapmod
-	if lapmod ~= 0 and errorbonus == 0 then
+	local errorbonus
+	if daytonakart and extimemod then
+		errorbonus = daytonakart.extimemod * lapmod
+	else
+		errorbonus = 5 * lapmod
+	end
+	if lapmod ~= 0 and errorbonus < 5 then
 		errorbonus = 5 * lapmod
 	elseif (errorbonus % 5) > 2 then
 		errorbonus = $ - ($ % 5) + 5
@@ -193,7 +198,7 @@ local function startset(player, map)
 		player.daytona.bonustime = 0
 	else
 		if not setmaps[map] then firstloadmap(map) end
-		player.daytona.timelimit, player.daytona.bonustime = GetDTRTimes(map)
+		player.daytona.timelimit, player.daytona.bonustime = setmaptime(map)
 		//if freeplay, add 10 seconds to the time limit as a buffer 'Position' time
 		if mapheaderinfo[map].noextension then
 			player.daytona.timelimit = $ + ((numlaps - 1) * player.daytona.bonustime)
@@ -348,7 +353,7 @@ addHook("ThinkFrame", do
 			end
 		end
 		
-		if endtimer > 0 then
+		if endtimer and endtimer > 0 then
 			endtimer = $ + 1
 			if endtimer > (4 * TIMEOVERLENGTH) and not modeattacking then
 				G_ExitLevel()
