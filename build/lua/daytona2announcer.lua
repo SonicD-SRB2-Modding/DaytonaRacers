@@ -2,8 +2,7 @@
 
 freeslot(
 "sfx_arccr", "sfx_arclo", "sfx_arcko", "sfx_arcbt",
-"sfx_am1lpr", "sfx_am2lpr", "sfx_am5lpr", "sfx_am7lpr",
-"sfx_am1lgr", "sfx_am2lgr",
+"sfx_amflap", "sfx_am2lpr", "sfx_am5lpr", "sfx_am7lpr",
 "sfx_amatuw", "sfx_amgoal", "sfx_amlot1", "sfx_amlot2",
 "sfx_amsc1", "sfx_amsc2", "sfx_amsc3", "sfx_amscgo",
 "sfx_amtex1", "sfx_amtex2", "sfx_amtex3", "sfx_amtex4", "sfx_amtex5"
@@ -18,17 +17,11 @@ local timeextension = {
 }
 
 local lapstogosfx = {
-	[1] = sfx_am1lpr,
+	[1] = sfx_amflap,
 	[2] = sfx_am2lpr,
 	[3] = nil,
 	[5] = sfx_am5lpr,
 	[7] = sfx_am7lpr
-}
-
-local legstogosfx = {
-	[1] = sfx_am1lgr,
-	[2] = sfx_am2lgr,
-	[3] = nil
 }
 
 local function announcerstartendcallouts(p)
@@ -80,13 +73,8 @@ local function announcerlapcallouts(p)
 		return
 	end
 	
+	p.announcearcade.heardlap = true
 	local sfxpack = lapstogosfx
-	if mapheaderinfo[gamemap].levelflags & LF_SECTIONRACE then
-		sfxpack = legstogosfx
-	elseif (tonumber(mapheaderinfo[gamemap].lapspersection) ~= nil) and (tonumber(mapheaderinfo[gamemap].lapspersection) > 1) then
-		if (lapstogo % tonumber(mapheaderinfo[gamemap].lapspersection)) != 0 then return end
-		lapstogo = lapstogo / tonumber(mapheaderinfo[gamemap].lapspersection)
-	end
 	if sfxpack[lapstogo] then S_StartSound(nil,sfxpack[lapstogo],p) end
 end
 
@@ -113,19 +101,21 @@ addHook("ThinkFrame", do
 			p.announcearcade.warnthirty = false
 			p.announcearcade.warnten = false
 			p.announcearcade.finish = false
-			p.announcearcade.lapquirp = 0
+			p.announcearcade.lapquirp = numlaps
+			p.announcearcade.heardlap = true
 		end
 		announcerstartendcallouts(p)
 		if not p.daytona then
 			announcerlapcallouts(p)
 		elseif not ((gametype & GT_BATTLE) or (gametype & GT_SPECIAL) or (gametype & GT_VERSUS) or (gametype & GT_TUTORIAL)) then
 			local lapstogo = (numlaps + 1) - p.laps
-			if (p.announcearcade.lapquirp != lapstogo) and (p.laps > 1) and (p.laps < numlaps) then
+			if (p.announcearcade.lapquirp != lapstogo) and (p.laps > 1) and (p.laps <= numlaps) then
 				p.announcearcade.lapquirp = lapstogo
+				p.announcearcade.heardlap = false
 			else
 				if p.daytona.quirpcooldown and (p.daytona.quirpcooldown > 0) then
 					p.daytona.quirpcooldown = $ - 1
-					if (p.daytona.quirpcooldown == 0) then
+					if (p.daytona.quirpcooldown == 0) and not (p.announcearcade.heardlap) then
 						announcerlapcallouts(p)
 					end
 				elseif p.daytona.timelimit ~= nil and (p.daytona.timelimit >= 0) then
@@ -146,6 +136,7 @@ addHook("MapChange", do
 		p.announcearcade.warnthirty = false
 		p.announcearcade.warnten = false
 		p.announcearcade.finish = false
-		p.announcearcade.lapquirp = 0
+		p.announcearcade.lapquirp = numlaps
+		p.announcearcade.heardlap = true
 	end
 end)

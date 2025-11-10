@@ -16,7 +16,7 @@ local YELLOWTEXT = 3
 local BLUETEXT = 4
 
 local customspeedometer = CV_RegisterVar({"arcade_speed", "Miles", CV_SHOWMODIF, {Miles=MILESPERHOUR, Kilometers=KILOMETERSPERHOUR, Meters=METERSPERSECOND, Fracunits=FRACUNITSPERTIC, Knots=NAUTICALMILESPERHOUR, Feet=FOOTPERSECOND, Percent=PERCENTAGESPEED}})
-
+local timerminstyle = CV_RegisterVar({"arcade_timer_min", "Off", CV_SHOWMODIF, CV_OnOff})
 
 //The base Max Speed for all 9 base speed types (Needs to be updated)
 local basemaxspeed = setmetatable({
@@ -62,6 +62,7 @@ local FONTSTRINGOFFSET =  setmetatable({
 	["LRMXG"] = -2,
 	["LRMXY"] = -2,
 	["LRMXR"] = -2,
+	["LRMXB"] = -2,
 	["LRMT"] = -1
 }, {__index = function() return 0 end})
 
@@ -104,6 +105,16 @@ local SEALEDSTARTIMES = {
 }
 
 local ufo = nil
+
+local function padExpZero(num)
+	if num < 10
+		return "00" .. tostring(num)
+	elseif num < 100
+		return "0" .. tostring(num)
+	else
+		return tostring(num)
+	end
+end
 
 local function padTimerZero(num)
 	if num < 10
@@ -189,11 +200,22 @@ local function drawLRMAXNum(v, time, x, y, f, colflag, tics, pos)
 		str = "∞"
 	elseif tics then
 		local secs = time / 35
-		if secs < 10 then
-			local ds = G_TicsToCentiseconds(time) / 10
-			str = tostring(secs) .. "." .. tostring(ds)
+		if timerminstyle.value and (not (gametype & GT_SPECIAL)) then
+			local mins = secs / 60
+			local displaysecs = secs % 60
+			if secs < 10 then
+				local ds = G_TicsToCentiseconds(time) / 10
+				str = padTimerZero(displaysecs) .. "." .. tostring(ds) .. '"'
+			else
+				str = tostring(mins) .. "'" .. padTimerZero(displaysecs) .. '"'
+			end
 		else
-			str = tostring(secs)
+			if secs < 10 then
+				local ds = G_TicsToCentiseconds(time) / 10
+				str = tostring(secs) .. "." .. tostring(ds)
+			else
+				str = tostring(secs)
+			end
 		end
 	else
 		str = tostring(time)
@@ -240,7 +262,7 @@ local function drawLRMAXTimer(v, x, y, time, flags, positioncountdown, overtime,
 			if (time % TICRATE) <= (TICRATE / 2) then colflag = YELLOWTEXT end
 		end
 	end
-	if (time == -1) or (gametype & GT_TUTORIAL) then
+	if (time == -1) then
 		drawInfinity(v, "LRMXG", x, y+15, flags, nil, "center")
 	else
 		drawLRMAXNum(v, abs(time), x, y+15, flags, colflag, true, "center")
@@ -255,40 +277,31 @@ local function drawLRMAXLaps(v, p, n, map, flags, flash)
 	local sectorstring
 	local maxlaps
 	local maxsectors
+	local playexp
 	local col = GREENTEXT
+	local y = 8
+	local x = 312
+	playexp = p.exp
 	if mapheaderinfo[gamemap].levelflags & LF_SECTIONRACE then
-		lapstring = "LEG"
-		currentlap = p.laps
-		if p.laps >= numlaps then currentlap = numlaps end
-		if (p.laps + 1) > numlaps then col = YELLOWTEXT end
-		maxlaps = numlaps 
-	elseif (tonumber(mapheaderinfo[map].lapspersection) ~= nil) and (tonumber(mapheaderinfo[map].lapspersection) > 1) then
-		currentlap = ((p.laps - 1) / tonumber(mapheaderinfo[map].lapspersection)) + 1
-		if (p.laps + tonumber(mapheaderinfo[map].lapspersection)) > numlaps then col = YELLOWTEXT end
-		maxlaps = numlaps / tonumber(mapheaderinfo[map].lapspersection)
-		maxsectors = tonumber(mapheaderinfo[map].lapspersection)
-		sectorstring = "Section " .. (max(p.laps - 1, 0) % tonumber(mapheaderinfo[map].lapspersection) + 1) .. " of " .. maxsectors
-		if p.laps > numlaps then 
-			currentlap = maxlaps
-			sectorstring = "Section " .. maxsectors .. " of " .. maxsectors
-		end
+		lapstring = "SECTION"
+		currentlap = p.gradingpointnum + 1
+		maxlaps = K_GetNumGradingPoints()
+		if p.gradingpointnum >= maxlaps then currentlap = maxlaps end
+		if (p.gradingpointnum + 1) >= maxlaps then col = YELLOWTEXT end
 	else
 		currentlap = p.laps
 		if p.laps >= numlaps then currentlap = numlaps end
-		if (p.laps + 1) > numlaps then col = YELLOWTEXT end
+		if (p.laps) >= numlaps then col = YELLOWTEXT end
 		maxlaps = numlaps 
 	end
 	if flash then 
 		if col ~= YELLOWTEXT then col = YELLOWTEXT else col = GREENTEXT end
 	end
-	local y = 8
-	local x = 312
 	drawNewString(v, "LRMT", lapstring, 272, 19, flags, nil, "right")
 	drawLRMAXNum(v, padTimerZero(currentlap), x, y, flags, col, false, "right")
 	drawNewString(v, "LRMT", "OF "..padTimerZero(maxlaps), x, 29, flags, nil, "right")
-	if (tonumber(mapheaderinfo[map].lapspersection) ~= nil) and (tonumber(mapheaderinfo[map].lapspersection) > 1) then
-		v.drawString(316, 37, sectorstring, flags, "small-right")
-	end
+	
+	drawNewString(v, "LRMT", "EXP: " .. padExpZero(playexp), x, 39, flags, nil, "right")
 end
 
 local function drawLRMAXEmeralds(v, p, flags, x, y)
@@ -376,6 +389,9 @@ local function drawLRMAXRings(v, p, flags, x, y)
 	local hptext = 0 //Value to show
 	local hpcol = SKINCOLOR_YELLOW
 	local showaddreminder = false
+	local amppatch = nil
+	local amplevel = 0
+	local ampcol = SKINCOLOR_GOLD
 	
 	if (gametype & GT_BATTLE) then //Battle Game modes - value will be Bumpers left, bar shows Sphere charge
 		if p.mo and p.mo.valid then
@@ -405,15 +421,22 @@ local function drawLRMAXRings(v, p, flags, x, y)
 		hppatch = v.cachePatch("DHPT_HP")
 	else //Race or Tutorial - bar and value shows how many Rings you have
 		hptext = p.rings
-		health = abs(p.rings)
+		health = min(abs(p.rings), 20)
 		hppatch = v.cachePatch("DHPT_RG")
 		
 		if not (gametype & GT_TUTORIAL) then showaddreminder = true end
-		
 		if p.rings < 0 then hpcol = SKINCOLOR_RED 
 		elseif daytonaracers and (daytonaracers.ringtimer > p.rings) and (p.realtime % 10 < 5) and not (gametype & GT_TUTORIAL) and (not modeattacking) then hpcol = SKINCOLOR_ORANGE end
+		
+		amplevel = p.amps / 15
+		if (amplevel > 6) then amplevel = 6 end
+		amppatch = v.cachePatch("DHPTA_" .. amplevel)
 	end
 	
+	if p.overdrive then 
+		hpcol = SKINCOLOR_PLATINUM
+		hppatch = v.cachePatch("DHPT_OD")
+	end
 	hpstep = min(FixedInt(FixedDiv(health*100, hpunits)), 100)
 	
 	local healthbarcol
@@ -475,6 +498,7 @@ local function drawLRMAXRings(v, p, flags, x, y)
 	
 	--Finally, draw the HP/BP/Ring string, plus a value of the current health inside the bar
 	v.draw(x, y, hppatch, flags, healthbarcol)
+	if (amppatch != nil) then v.draw(x, y, amppatch, flags, v.getColormap(0, ampcol)) end
 	v.drawString(textx, texty, hptext, flags|healthbartextcol, "center")
 	
 	if showaddreminder and daytonaracers and (daytonaracers.ringtimer <= p.rings) and (p.realtime % 20 < 10) and (not modeattacking) then
@@ -558,7 +582,7 @@ end
 local function drawTATimer(v, p, xmid, y, flags)
 	if not (p and p.valid) then return end
 	local littletime = nil
-	local littletimestr = "--:--.--"
+	local littletimestr = "--'--" .. '"--'
 	local medal = 5
 	local medalpatch = v.cachePatch("BIGNEEDIT")
 	local medalcol = v.getColormap(0, SKINCOLOR_NONE)
@@ -589,7 +613,7 @@ local function drawTATimer(v, p, xmid, y, flags)
 		if currenttime < medaltimes[i] then
 			littletime = medaltimes[i] - p.realtime
 			littletimecolflag = 0
-			littletimestr = padTimerZero(G_TicsToMinutes(littletime, true)) .. ":" .. padTimerZero(G_TicsToSeconds(littletime)) .. "." ..  padTimerZero(G_TicsToCentiseconds(littletime))
+			littletimestr = padTimerZero(G_TicsToMinutes(littletime, true)) .. "'" .. padTimerZero(G_TicsToSeconds(littletime)) .. '"' ..  padTimerZero(G_TicsToCentiseconds(littletime))
 			medal = i
 			medalpatch = v.cachePatch("BIGGOTITA")
 			medalcol = ({
@@ -646,7 +670,7 @@ local function drawTAMedalTimes(v, p, x, y, flags)
 				[4] = v.getColormap(0, SKINCOLOR_BRONZE)
 			}) [i+1]
 			local time = medaltimes[i+1]
-			local str = padTimerZero(G_TicsToMinutes(time, true)) .. ":" .. padTimerZero(G_TicsToSeconds(time)) .. "." ..  padTimerZero(G_TicsToCentiseconds(time))
+			local str = padTimerZero(G_TicsToMinutes(time, true)) .. "'" .. padTimerZero(G_TicsToSeconds(time)) .. '"' ..  padTimerZero(G_TicsToCentiseconds(time))
 			local colflag = 0
 			if (not timestep) and (time > currenttime) then 
 				if p.exiting then colflag = V_GREENMAP else colflag = V_YELLOWMAP end
@@ -720,6 +744,7 @@ hud.add(function(v, p, c)
 	hud.disable("position") //Placement
 	hud.disable("speedometer") //Speed
 	hud.disable("freeplay") //Freeplay info
+	hud.disable("rings") //Rings
 	
 	
 	drawLRMAXTimer(v, 160, 5, timertime, V_SNAPTOTOP|V_HUDTRANS, positioncountdown, overtime, p)
