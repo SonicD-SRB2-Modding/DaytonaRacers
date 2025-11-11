@@ -1,0 +1,8 @@
+{
+	"name": "Aurora's Daytona Racers",
+	"author": "Latius (Aurora Lucias)",
+	"description": "Arcade Mode for Ring Racers. Features gameplay changing lua.",
+	"info_url": "https://mb.srb2.org/addons/auroras-daytona-racers-arcade-mode-for-drrr.6643/",
+	"version": "RC 2.2",
+	"game_version": "v2.4"
+}

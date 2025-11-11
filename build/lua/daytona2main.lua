@@ -369,6 +369,8 @@ addHook("ThinkFrame", do
 							if p.mo then P_DamageMobj(p.mo, nil, nil, 10000) end
 							P_FlashPal(p, 1, 10)
 						end
+					else
+						p.realtime = leveltime + (5 * p.position * TICRATE)
 					end
 				end
 				continue
@@ -436,15 +438,18 @@ addHook("ThinkFrame", do
 			end
 		elseif outplayers == numplayers and numplayers > 0 then
 			endtimer = 1
+			for p in players.iterate() do
+				p.realtime = leveltime + (5 * p.position * TICRATE)
+			end
 		elseif possoutplayers == numplayers and numplayers > 0 then
 			for p in players.iterate() do
 				if p.spectator continue end
 				if p.exiting then continue end
-				if p.daytona.timelimit + (TIMEOVERLENGTH) < leveltime then
+				if (p.daytona.timelimit + (TIMEOVERLENGTH) < leveltime) or (p.bot and (p.daytona.timelimit < leveltime)) then
 					if (p.daytona.extendflash > -1) then
 						p.daytona.extendflash = -1
 						//S_ChangeMusic("LOSERC",true,p) //Play losing music
-						p.pflags = $|PF_NOCONTEST
+						p.pflags = $ | PF_NOCONTEST
 						p.exiting = TIMEOVERLENGTH
 						p.daytona.quirpcooldown = -1
 						if daytonaracers.explosiveKO then --Explosive KO!
@@ -452,6 +457,7 @@ addHook("ThinkFrame", do
 							P_FlashPal(p, 1, 10)
 						end
 					end
+					p.realtime = leveltime + (5 * p.position * TICRATE)
 					outplayers = $ + 1
 				end
 				if outplayers == numplayers and numplayers > 0 then
